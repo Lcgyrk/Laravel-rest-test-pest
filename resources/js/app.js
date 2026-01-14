@@ -1,0 +1,10 @@
+import './bootstrap';
+import './router';
+import './api';
+import './auth';
+import './pages/login';
+import './pages/register';
+import './pages/dashboard';
+import './pages/tickets';
+import './pages/users';
+import './pages/404';
