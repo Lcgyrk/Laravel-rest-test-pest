@@ -156,3 +156,55 @@ test('customer cannot change status except closed', function () {
     expect($ticket->status)->toBe('closed');
 });
 
+test('admin can update any ticket', function () {
+    // Create a customer and their ticket
+    $customer = User::factory()->create(['role' => 'customer']);
+    $ticket = Ticket::factory()->create([
+        'user_id' => $customer->id,
+        'title' => 'Original Title',
+        'description' => 'Original Description',
+        'status' => 'open',
+    ]);
+
+    // Create an admin
+    $admin = User::factory()->create(['role' => 'admin']);
+
+    // Authenticate as admin
+    Sanctum::actingAs($admin);
+
+    // Admin updates the customer's ticket with all fields
+    $response = $this->putJson("/api/tickets/{$ticket->id}", [
+        'title' => 'Admin Updated Title',
+        'description' => 'Admin Updated Description',
+        'status' => 'in_progress',
+    ]);
+
+    // Should be successful
+    $response->assertStatus(200);
+
+    // Verify the ticket WAS updated
+    $ticket->refresh();
+    expect($ticket->title)->toBe('Admin Updated Title');
+    expect($ticket->description)->toBe('Admin Updated Description');
+    expect($ticket->status)->toBe('in_progress');
+
+    // Admin updates to resolved
+    $response = $this->putJson("/api/tickets/{$ticket->id}", [
+        'status' => 'resolved',
+    ]);
+
+    $response->assertStatus(200);
+    $ticket->refresh();
+    expect($ticket->status)->toBe('resolved');
+
+    // Admin updates to closed
+    $response = $this->putJson("/api/tickets/{$ticket->id}", [
+        'status' => 'closed',
+    ]);
+
+    $response->assertStatus(200);
+    $ticket->refresh();
+    expect($ticket->status)->toBe('closed');
+});
+
+
