@@ -78,3 +78,18 @@ test('customer can create ticket', function () {
     $response = $this->actingAs($customer)->postJson('/api/tickets', $payload);
     $response->assertJsonFragment(['title' => 'New Customer Ticket']);
 });
+
+
+test('admin can create ticket', function () {
+    $admin = User::factory()->create(['role' => 'admin']);
+
+    $payload = [
+        'title' => 'Admin Created Ticket',
+        'description' => 'Admin description',
+        'status' => 'open',
+    ];
+
+    $response = $this->actingAs($admin)->postJson('/api/tickets', $payload);
+    $response->assertStatus(201);
+    $response->assertJsonFragment(['title' => 'Admin Created Ticket']);
+});
