@@ -257,7 +257,7 @@ test('only admin can delete tickets', function () {
 test('customer cannot delete tickets', function () {
     // Create a customer
     $customer = User::factory()->create(['role' => 'customer']);
-    
+
     // Customer creates their own ticket
     $ownTicket = Ticket::factory()->create([
         'user_id' => $customer->id,
@@ -295,6 +295,32 @@ test('customer cannot delete tickets', function () {
 
     // Verify the other ticket still exists
     expect(Ticket::find($otherTicket->id))->not->toBeNull();
+});
+
+test('agent cannot delete tickets', function () {
+    // Create a customer and their ticket
+    $customer = User::factory()->create(['role' => 'customer']);
+    $ticket = Ticket::factory()->create([
+        'user_id' => $customer->id,
+        'title' => 'Customer Ticket',
+        'description' => 'Customer Description',
+        'status' => 'open',
+    ]);
+
+    // Create an agent
+    $agent = User::factory()->create(['role' => 'agent']);
+
+    // Authenticate as agent
+    Sanctum::actingAs($agent);
+
+    // Agent tries to delete the customer's ticket
+    $response = $this->deleteJson("/api/tickets/{$ticket->id}");
+
+    // Should be forbidden
+    $response->assertStatus(403);
+
+    // Verify ticket still exists
+    expect(Ticket::find($ticket->id))->not->toBeNull();
 });
 
 
