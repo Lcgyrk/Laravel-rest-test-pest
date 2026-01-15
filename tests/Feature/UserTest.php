@@ -107,3 +107,23 @@ test('validation fails with duplicate email', function () {
 
     $response->assertStatus(422);
 });
+
+test('password is hashed when creating user', function () {
+    $admin = User::factory()->create(['role' => 'admin']);
+
+    $payload = [
+        'name' => 'New User',
+        'email' => 'newuser@example.com',
+        'password' => 'plainpassword',
+        'password_confirmation' => 'plainpassword',
+        'role' => 'customer',
+    ];
+
+    $response = $this->actingAs($admin)->postJson('/api/users', $payload);
+
+    $response->assertStatus(201);
+
+    $user = User::where('email', 'newuser@example.com')->first();
+    expect($user->password)->not->toBe('plainpassword');
+    expect(\Illuminate\Support\Facades\Hash::check('plainpassword', $user->password))->toBeTrue();
+});
