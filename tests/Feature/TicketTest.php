@@ -13,7 +13,6 @@ it('has ticket page', function () {
     $response->assertStatus(200);
 });
 
-
 test('customer can only see their own tickets', function () {
     $customer = User::factory()->create(['role' => 'customer']);
     $other = User::factory()->create(['role' => 'customer']);
@@ -67,4 +66,15 @@ test('unauthenticated user cannot access tickets', function () {
     $response = $this->getJson('/api/tickets');
 
     $response->assertStatus(401);
+});
+
+test('customer can create ticket', function () {
+    $customer = User::factory()->create(['role' => 'customer']);
+
+    $payload = [
+        'title' => 'New Customer Ticket',
+    ];
+
+    $response = $this->actingAs($customer)->postJson('/api/tickets', $payload);
+    $response->assertJsonFragment(['title' => 'New Customer Ticket']);
 });
