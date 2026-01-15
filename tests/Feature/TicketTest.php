@@ -12,3 +12,25 @@ it('has ticket page', function () {
 
     $response->assertStatus(200);
 });
+
+
+test('customer can only see their own tickets', function () {
+    $customer = User::factory()->create(['role' => 'customer']);
+    $other = User::factory()->create(['role' => 'customer']);
+
+    Ticket::factory()->create([
+        'user_id' => $customer->id,
+        'title' => 'Customer Ticket',
+    ]);
+
+    Ticket::factory()->create([
+        'user_id' => $other->id,
+        'title' => 'Other Customer Ticket',
+    ]);
+
+    $response = $this->actingAs($customer)->getJson('/api/tickets');
+
+    $response->assertStatus(200);
+    $response->assertJsonFragment(['title' => 'Customer Ticket']);
+    $response->assertJsonMissing(['title' => 'Other Customer Ticket']);
+});
