@@ -90,3 +90,20 @@ test('admin can create new user', function () {
     $response->assertJsonFragment(['name' => 'New User']);
     $this->assertDatabaseHas('users', ['email' => 'newuser@example.com']);
 });
+
+test('validation fails with duplicate email', function () {
+    $admin = User::factory()->create(['role' => 'admin']);
+    $existingUser = User::factory()->create(['email' => 'existing@example.com']);
+
+    $payload = [
+        'name' => 'New User',
+        'email' => 'existing@example.com',
+        'password' => 'password123',
+        'password_confirmation' => 'password123',
+        'role' => 'customer',
+    ];
+
+    $response = $this->actingAs($admin)->postJson('/api/users', $payload);
+
+    $response->assertStatus(422);
+});
