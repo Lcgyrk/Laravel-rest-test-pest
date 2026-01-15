@@ -36,3 +36,26 @@ test('customer cannot access users endpoint', function () {
 
     $response->assertStatus(403);
 });
+
+test('returns all users with correct structure', function () {
+    $admin = User::factory()->create(['role' => 'admin']);
+    User::factory()->create(['name' => 'Test User 1', 'email' => 'test1@example.com']);
+    User::factory()->create(['name' => 'Test User 2', 'email' => 'test2@example.com']);
+
+    $response = $this->actingAs($admin)->getJson('/api/users');
+
+    $response->assertStatus(200);
+    $response->assertJsonStructure([
+        'message',
+        'users' => [
+            '*' => [
+                'id',
+                'name',
+                'email',
+                'role',
+                'created_at',
+                'updated_at',
+            ]
+        ]
+    ]);
+});
