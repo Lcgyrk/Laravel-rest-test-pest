@@ -28,3 +28,11 @@ test('agent cannot access users endpoint', function () {
 
     $response->assertStatus(403);
 });
+
+test('customer cannot access users endpoint', function () {
+    $customer = User::factory()->create(['role' => 'customer']);
+
+    $response = $this->actingAs($customer)->getJson('/api/users');
+
+    $response->assertStatus(403);
+});
