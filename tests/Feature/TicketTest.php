@@ -93,3 +93,17 @@ test('admin can create ticket', function () {
     $response->assertStatus(201);
     $response->assertJsonFragment(['title' => 'Admin Created Ticket']);
 });
+
+test('agent cannot create ticket', function () {
+    $agent = User::factory()->create(['role' => 'agent']);
+
+    $payload = [
+        'title' => 'Agent Ticket Attempt',
+        'description' => 'Agent should not be allowed',
+        'status' => 'open',
+    ];
+
+    $response = $this->actingAs($agent)->postJson('/api/tickets', $payload);
+
+    $response->assertStatus(403);
+});
