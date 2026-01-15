@@ -20,3 +20,11 @@ test('only admin can list users', function () {
     $response->assertJsonFragment(['name' => 'Test User 1']);
     $response->assertJsonFragment(['name' => 'Test User 2']);
 });
+
+test('agent cannot access users endpoint', function () {
+    $agent = User::factory()->create(['role' => 'agent']);
+
+    $response = $this->actingAs($agent)->getJson('/api/users');
+
+    $response->assertStatus(403);
+});
