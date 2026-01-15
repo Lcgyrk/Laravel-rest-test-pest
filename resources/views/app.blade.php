@@ -4,7 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LaraDesk - Support Ticket System</title>
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @if (app()->environment('testing'))
+        <link rel="stylesheet" href="/resources/css/app.css">
+        <script type="module" src="/resources/js/app.js"></script>
+    @else
+        @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @endif
 </head>
 <body class="bg-gray-50">
     <div id="app">
