@@ -17,6 +17,19 @@ test('only admin can list users', function () {
     $response = $this->actingAs($admin)->getJson('/api/users');
 
     $response->assertStatus(200);
+    $response->assertJsonStructure([
+        'message',
+        'users' => [
+            '*' => [
+                'id',
+                'name',
+                'email',
+                'role',
+                'created_at',
+                'updated_at',
+            ]
+        ]
+    ]);
     $response->assertJsonFragment(['name' => 'Test User 1']);
     $response->assertJsonFragment(['name' => 'Test User 2']);
 });
@@ -58,4 +71,22 @@ test('returns all users with correct structure', function () {
             ]
         ]
     ]);
+});
+
+test('admin can create new user', function () {
+    $admin = User::factory()->create(['role' => 'admin']);
+
+    $payload = [
+        'name' => 'New User',
+        'email' => 'newuser@example.com',
+        'password' => 'password123',
+        'password_confirmation' => 'password123',
+        'role' => 'customer',
+    ];
+
+    $response = $this->actingAs($admin)->postJson('/api/users', $payload);
+
+    $response->assertStatus(201);
+    $response->assertJsonFragment(['name' => 'New User']);
+    $this->assertDatabaseHas('users', ['email' => 'newuser@example.com']);
 });
