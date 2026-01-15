@@ -73,9 +73,13 @@ test('customer can create ticket', function () {
 
     $payload = [
         'title' => 'New Customer Ticket',
+        'description' => 'Customer description',
+        'status' => 'open',
     ];
 
     $response = $this->actingAs($customer)->postJson('/api/tickets', $payload);
+
+    $response->assertStatus(201);
     $response->assertJsonFragment(['title' => 'New Customer Ticket']);
 });
 
