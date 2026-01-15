@@ -1,5 +1,4 @@
 <?php
-
 namespace Database\Factories;
 
 use App\Models\Ticket;
@@ -10,12 +9,12 @@ class TicketFactory extends Factory
 {
     protected $model = Ticket::class;
 
-    public function definition()
+    public function definition(): array
     {
         return [
             'user_id' => User::factory(),
-            'title' => $this->faker->sentence,
-            'description' => $this->faker->paragraph,
+            'title' => $this->faker->sentence(),
+            'description' => $this->faker->paragraph(),
             'status' => 'open',
         ];
     }
