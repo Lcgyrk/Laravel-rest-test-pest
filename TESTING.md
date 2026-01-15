@@ -106,54 +106,38 @@ class TicketModelTest extends TestCase
 
 #### 2. **Validációs Logika / Validation Logic**
 
-Tesztelhetjük a validációs szabályokat:
+Egyszerű validációs logika tesztelése (tiszta PHP):
 
 ```php
 <?php
 
 namespace Tests\Unit;
 
-use Illuminate\Support\Facades\Validator;
 use PHPUnit\Framework\TestCase;
 
 class TicketValidationTest extends TestCase
 {
-    public function test_ticket_title_is_required(): void
+    public function test_string_exceeds_maximum_length(): void
     {
-        $data = [
-            'description' => 'Test description',
-        ];
-        
-        $rules = [
-            'title' => 'required|string|max:255',
-            'description' => 'required|string|min:10',
-        ];
-        
-        $validator = Validator::make($data, $rules);
-        
-        $this->assertTrue($validator->fails());
-        $this->assertArrayHasKey('title', $validator->errors()->toArray());
+        $title = str_repeat('a', 256);
+        $maxLength = 255;
+
+        $this->assertGreaterThan($maxLength, strlen($title));
     }
     
-    public function test_ticket_description_minimum_length(): void
+    public function test_status_is_in_allowed_list(): void
     {
-        $data = [
-            'title' => 'Test',
-            'description' => 'Short',
-        ];
-        
-        $rules = [
-            'title' => 'required|string|max:255',
-            'description' => 'required|string|min:10',
-        ];
-        
-        $validator = Validator::make($data, $rules);
-        
-        $this->assertTrue($validator->fails());
-        $this->assertArrayHasKey('description', $validator->errors()->toArray());
+        $allowedStatuses = ['open', 'in_progress', 'resolved', 'closed'];
+        $testStatus = 'open';
+
+        $this->assertContains($testStatus, $allowedStatuses);
     }
 }
 ```
+
+**Fontos / Important:** Laravel Validator facade tesztelése **Feature tesztekben** történik, nem Unit tesztekben! A Unit tesztek tiszta PHP logikát tesztelnek, Laravel függőségek nélkül.
+
+**Important:** Testing Laravel's Validator facade should be done in **Feature tests**, not Unit tests! Unit tests should test pure PHP logic without Laravel dependencies.
 
 #### 3. **Segédfüggvények / Helper Functions**
 
