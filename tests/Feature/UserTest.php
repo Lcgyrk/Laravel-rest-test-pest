@@ -127,3 +127,19 @@ test('password is hashed when creating user', function () {
     expect($user->password)->not->toBe('plainpassword');
     expect(\Illuminate\Support\Facades\Hash::check('plainpassword', $user->password))->toBeTrue();
 });
+
+test('non-admin cannot create users', function () {
+    $agent = User::factory()->create(['role' => 'agent']);
+
+    $payload = [
+        'name' => 'New User',
+        'email' => 'newuser@example.com',
+        'password' => 'password123',
+        'password_confirmation' => 'password123',
+        'role' => 'customer',
+    ];
+
+    $response = $this->actingAs($agent)->postJson('/api/users', $payload);
+
+    $response->assertStatus(403);
+});
