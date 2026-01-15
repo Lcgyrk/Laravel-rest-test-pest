@@ -48,3 +48,17 @@ test('agent can see all tickets', function () {
     $response->assertJsonFragment(['title' => 'User Ticket']);
     $response->assertJsonFragment(['title' => 'Agent Ticket']);
 });
+
+test('admin can see all tickets', function () {
+    $admin = User::factory()->create(['role' => 'admin']);
+    $u = User::factory()->create();
+
+    Ticket::factory()->create(['user_id' => $u->id, 'title' => 'User Ticket']);
+    Ticket::factory()->create(['user_id' => $admin->id, 'title' => 'Admin Ticket']);
+
+    $response = $this->actingAs($admin)->getJson('/api/tickets');
+
+    $response->assertStatus(200);
+    $response->assertJsonFragment(['title' => 'User Ticket']);
+    $response->assertJsonFragment(['title' => 'Admin Ticket']);
+});
