@@ -56,3 +56,54 @@ test('customer can only update their own ticket', function () {
     expect($ticket->status)->toBe('closed');
 });
 
+test('agent can update any ticket status', function () {
+    // Create a customer and their ticket
+    $customer = User::factory()->create(['role' => 'customer']);
+    $ticket = Ticket::factory()->create([
+        'user_id' => $customer->id,
+        'title' => 'Original Title',
+        'description' => 'Original Description',
+        'status' => 'open',
+    ]);
+
+    // Create an agent
+    $agent = User::factory()->create(['role' => 'agent']);
+
+    // Authenticate as agent
+    Sanctum::actingAs($agent);
+
+    // Agent updates the customer's ticket status to in_progress
+    $response = $this->putJson("/api/tickets/{$ticket->id}", [
+        'title' => 'Agent Updated Title',
+        'description' => 'Agent Updated Description',
+        'status' => 'in_progress',
+    ]);
+
+    // Should be successful
+    $response->assertStatus(200);
+
+    // Verify the ticket WAS updated
+    $ticket->refresh();
+    expect($ticket->title)->toBe('Agent Updated Title');
+    expect($ticket->description)->toBe('Agent Updated Description');
+    expect($ticket->status)->toBe('in_progress');
+
+    // Agent updates the ticket to resolved
+    $response = $this->putJson("/api/tickets/{$ticket->id}", [
+        'status' => 'resolved',
+    ]);
+
+    $response->assertStatus(200);
+    $ticket->refresh();
+    expect($ticket->status)->toBe('resolved');
+
+    // Agent updates the ticket to closed
+    $response = $this->putJson("/api/tickets/{$ticket->id}", [
+        'status' => 'closed',
+    ]);
+
+    $response->assertStatus(200);
+    $ticket->refresh();
+    expect($ticket->status)->toBe('closed');
+});
+
