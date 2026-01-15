@@ -323,5 +323,20 @@ test('agent cannot delete tickets', function () {
     expect(Ticket::find($ticket->id))->not->toBeNull();
 });
 
+test('deleting non-existent ticket returns 404', function () {
+    // Create an admin
+    $admin = User::factory()->create(['role' => 'admin']);
+
+    // Authenticate as admin
+    Sanctum::actingAs($admin);
+
+    // Try to delete a ticket that doesn't exist
+    $nonExistentId = 99999;
+    $response = $this->deleteJson("/api/tickets/{$nonExistentId}");
+
+    // Should return 404
+    $response->assertStatus(404);
+});
+
 
 
