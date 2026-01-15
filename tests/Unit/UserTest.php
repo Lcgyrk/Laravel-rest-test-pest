@@ -1,0 +1,342 @@
+<?php
+
+use App\Models\Ticket;
+use App\Models\User;
+use Laravel\Sanctum\Sanctum;
+
+test('customer can only update their own ticket', function () {
+    // Create two customers
+    $customer1 = User::factory()->create(['role' => 'customer']);
+    $customer2 = User::factory()->create(['role' => 'customer']);
+
+    // Customer 1 creates a ticket
+    $ticket = Ticket::factory()->create([
+        'user_id' => $customer1->id,
+        'title' => 'Original Title',
+        'description' => 'Original Description',
+        'status' => 'open',
+    ]);
+
+    // Authenticate as customer 2 (trying to update customer 1's ticket)
+    Sanctum::actingAs($customer2);
+
+    // Attempt to update customer 1's ticket
+    $response = $this->putJson("/api/tickets/{$ticket->id}", [
+        'title' => 'Updated Title',
+        'description' => 'Updated Description',
+        'status' => 'in_progress',
+    ]);
+
+    // Should be forbidden
+    $response->assertStatus(403);
+
+    // Verify the ticket was NOT updated
+    $ticket->refresh();
+    expect($ticket->title)->toBe('Original Title');
+    expect($ticket->description)->toBe('Original Description');
+    expect($ticket->status)->toBe('open');
+
+    // Now authenticate as customer 1 (the owner)
+    Sanctum::actingAs($customer1);
+
+    // Attempt to update their own ticket (customers can only close tickets for status)
+    $response = $this->putJson("/api/tickets/{$ticket->id}", [
+        'title' => 'Updated Title',
+        'description' => 'Updated Description',
+        'status' => 'closed',
+    ]);
+
+    // Should be successful
+    $response->assertStatus(200);
+
+    // Verify the ticket WAS updated
+    $ticket->refresh();
+    expect($ticket->title)->toBe('Updated Title');
+    expect($ticket->description)->toBe('Updated Description');
+    expect($ticket->status)->toBe('closed');
+});
+
+test('agent can update any ticket status', function () {
+    // Create a customer and their ticket
+    $customer = User::factory()->create(['role' => 'customer']);
+    $ticket = Ticket::factory()->create([
+        'user_id' => $customer->id,
+        'title' => 'Original Title',
+        'description' => 'Original Description',
+        'status' => 'open',
+    ]);
+
+    // Create an agent
+    $agent = User::factory()->create(['role' => 'agent']);
+
+    // Authenticate as agent
+    Sanctum::actingAs($agent);
+
+    // Agent updates the customer's ticket status to in_progress
+    $response = $this->putJson("/api/tickets/{$ticket->id}", [
+        'title' => 'Agent Updated Title',
+        'description' => 'Agent Updated Description',
+        'status' => 'in_progress',
+    ]);
+
+    // Should be successful
+    $response->assertStatus(200);
+
+    // Verify the ticket WAS updated
+    $ticket->refresh();
+    expect($ticket->title)->toBe('Agent Updated Title');
+    expect($ticket->description)->toBe('Agent Updated Description');
+    expect($ticket->status)->toBe('in_progress');
+
+    // Agent updates the ticket to resolved
+    $response = $this->putJson("/api/tickets/{$ticket->id}", [
+        'status' => 'resolved',
+    ]);
+
+    $response->assertStatus(200);
+    $ticket->refresh();
+    expect($ticket->status)->toBe('resolved');
+
+    // Agent updates the ticket to closed
+    $response = $this->putJson("/api/tickets/{$ticket->id}", [
+        'status' => 'closed',
+    ]);
+
+    $response->assertStatus(200);
+    $ticket->refresh();
+    expect($ticket->status)->toBe('closed');
+});
+
+test('customer cannot change status except closed', function () {
+    // Create a customer
+    $customer = User::factory()->create(['role' => 'customer']);
+
+    // Customer creates a ticket
+    $ticket = Ticket::factory()->create([
+        'user_id' => $customer->id,
+        'title' => 'Customer Ticket',
+        'description' => 'Customer Description',
+        'status' => 'open',
+    ]);
+
+    // Authenticate as customer
+    Sanctum::actingAs($customer);
+
+    // Try to change status to in_progress
+    $response = $this->putJson("/api/tickets/{$ticket->id}", [
+        'status' => 'in_progress',
+    ]);
+
+    // Should be forbidden
+    $response->assertStatus(403);
+    $response->assertJson([
+        'message' => 'Customers can only close tickets',
+    ]);
+
+    // Verify ticket status was NOT changed
+    $ticket->refresh();
+    expect($ticket->status)->toBe('open');
+
+    // Try to change status to resolved
+    $response = $this->putJson("/api/tickets/{$ticket->id}", [
+        'status' => 'resolved',
+    ]);
+
+    $response->assertStatus(403);
+    $ticket->refresh();
+    expect($ticket->status)->toBe('open');
+
+    // Try to change status to closed (should succeed)
+    $response = $this->putJson("/api/tickets/{$ticket->id}", [
+        'status' => 'closed',
+    ]);
+
+    $response->assertStatus(200);
+    $ticket->refresh();
+    expect($ticket->status)->toBe('closed');
+});
+
+test('admin can update any ticket', function () {
+    // Create a customer and their ticket
+    $customer = User::factory()->create(['role' => 'customer']);
+    $ticket = Ticket::factory()->create([
+        'user_id' => $customer->id,
+        'title' => 'Original Title',
+        'description' => 'Original Description',
+        'status' => 'open',
+    ]);
+
+    // Create an admin
+    $admin = User::factory()->create(['role' => 'admin']);
+
+    // Authenticate as admin
+    Sanctum::actingAs($admin);
+
+    // Admin updates the customer's ticket with all fields
+    $response = $this->putJson("/api/tickets/{$ticket->id}", [
+        'title' => 'Admin Updated Title',
+        'description' => 'Admin Updated Description',
+        'status' => 'in_progress',
+    ]);
+
+    // Should be successful
+    $response->assertStatus(200);
+
+    // Verify the ticket WAS updated
+    $ticket->refresh();
+    expect($ticket->title)->toBe('Admin Updated Title');
+    expect($ticket->description)->toBe('Admin Updated Description');
+    expect($ticket->status)->toBe('in_progress');
+
+    // Admin updates to resolved
+    $response = $this->putJson("/api/tickets/{$ticket->id}", [
+        'status' => 'resolved',
+    ]);
+
+    $response->assertStatus(200);
+    $ticket->refresh();
+    expect($ticket->status)->toBe('resolved');
+
+    // Admin updates to closed
+    $response = $this->putJson("/api/tickets/{$ticket->id}", [
+        'status' => 'closed',
+    ]);
+
+    $response->assertStatus(200);
+    $ticket->refresh();
+    expect($ticket->status)->toBe('closed');
+});
+
+test('only admin can delete tickets', function () {
+    // Create a customer and their ticket
+    $customer = User::factory()->create(['role' => 'customer']);
+    $ticket = Ticket::factory()->create([
+        'user_id' => $customer->id,
+        'title' => 'Customer Ticket',
+        'description' => 'Customer Description',
+        'status' => 'open',
+    ]);
+
+    // Customer tries to delete their own ticket
+    Sanctum::actingAs($customer);
+    $response = $this->deleteJson("/api/tickets/{$ticket->id}");
+
+    // Should be forbidden
+    $response->assertStatus(403);
+
+    // Verify ticket still exists
+    expect(Ticket::find($ticket->id))->not->toBeNull();
+
+    // Create an agent
+    $agent = User::factory()->create(['role' => 'agent']);
+
+    // Agent tries to delete the ticket
+    Sanctum::actingAs($agent);
+    $response = $this->deleteJson("/api/tickets/{$ticket->id}");
+
+    // Should be forbidden
+    $response->assertStatus(403);
+
+    // Verify ticket still exists
+    expect(Ticket::find($ticket->id))->not->toBeNull();
+
+    // Create an admin
+    $admin = User::factory()->create(['role' => 'admin']);
+
+    // Admin deletes the ticket
+    Sanctum::actingAs($admin);
+    $response = $this->deleteJson("/api/tickets/{$ticket->id}");
+
+    // Should be successful
+    $response->assertStatus(200);
+
+    // Verify ticket was deleted
+    expect(Ticket::find($ticket->id))->toBeNull();
+});
+
+test('customer cannot delete tickets', function () {
+    // Create a customer
+    $customer = User::factory()->create(['role' => 'customer']);
+
+    // Customer creates their own ticket
+    $ownTicket = Ticket::factory()->create([
+        'user_id' => $customer->id,
+        'title' => 'Own Ticket',
+        'description' => 'Own Description',
+        'status' => 'open',
+    ]);
+
+    // Create another customer and their ticket
+    $otherCustomer = User::factory()->create(['role' => 'customer']);
+    $otherTicket = Ticket::factory()->create([
+        'user_id' => $otherCustomer->id,
+        'title' => 'Other Ticket',
+        'description' => 'Other Description',
+        'status' => 'open',
+    ]);
+
+    // Authenticate as the first customer
+    Sanctum::actingAs($customer);
+
+    // Customer tries to delete their own ticket
+    $response = $this->deleteJson("/api/tickets/{$ownTicket->id}");
+
+    // Should be forbidden
+    $response->assertStatus(403);
+
+    // Verify their own ticket still exists
+    expect(Ticket::find($ownTicket->id))->not->toBeNull();
+
+    // Customer tries to delete another customer's ticket
+    $response = $this->deleteJson("/api/tickets/{$otherTicket->id}");
+
+    // Should be forbidden
+    $response->assertStatus(403);
+
+    // Verify the other ticket still exists
+    expect(Ticket::find($otherTicket->id))->not->toBeNull();
+});
+
+test('agent cannot delete tickets', function () {
+    // Create a customer and their ticket
+    $customer = User::factory()->create(['role' => 'customer']);
+    $ticket = Ticket::factory()->create([
+        'user_id' => $customer->id,
+        'title' => 'Customer Ticket',
+        'description' => 'Customer Description',
+        'status' => 'open',
+    ]);
+
+    // Create an agent
+    $agent = User::factory()->create(['role' => 'agent']);
+
+    // Authenticate as agent
+    Sanctum::actingAs($agent);
+
+    // Agent tries to delete the customer's ticket
+    $response = $this->deleteJson("/api/tickets/{$ticket->id}");
+
+    // Should be forbidden
+    $response->assertStatus(403);
+
+    // Verify ticket still exists
+    expect(Ticket::find($ticket->id))->not->toBeNull();
+});
+
+test('deleting non-existent ticket returns 404', function () {
+    // Create an admin
+    $admin = User::factory()->create(['role' => 'admin']);
+
+    // Authenticate as admin
+    Sanctum::actingAs($admin);
+
+    // Try to delete a ticket that doesn't exist
+    $nonExistentId = 99999;
+    $response = $this->deleteJson("/api/tickets/{$nonExistentId}");
+
+    // Should return 404
+    $response->assertStatus(404);
+});
+
+
+
