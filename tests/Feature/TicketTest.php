@@ -107,3 +107,17 @@ test('agent cannot create ticket', function () {
 
     $response->assertStatus(403);
 });
+
+test('validation fails with invalid data', function () {
+    $customer = User::factory()->create(['role' => 'customer']);
+
+    $payload = [
+        'description' => 'No title provided',
+        'status' => 'open',
+    ];
+
+    $response = $this->actingAs($customer)->postJson('/api/tickets', $payload);
+
+    $response->assertStatus(422);
+    $response->assertJsonValidationErrors('title');
+});
