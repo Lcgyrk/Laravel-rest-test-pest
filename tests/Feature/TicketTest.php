@@ -62,3 +62,9 @@ test('admin can see all tickets', function () {
     $response->assertJsonFragment(['title' => 'User Ticket']);
     $response->assertJsonFragment(['title' => 'Admin Ticket']);
 });
+
+test('unauthenticated user cannot access tickets', function () {
+    $response = $this->getJson('/api/tickets');
+
+    $response->assertStatus(401);
+});
