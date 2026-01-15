@@ -107,3 +107,52 @@ test('agent can update any ticket status', function () {
     expect($ticket->status)->toBe('closed');
 });
 
+test('customer cannot change status except closed', function () {
+    // Create a customer
+    $customer = User::factory()->create(['role' => 'customer']);
+
+    // Customer creates a ticket
+    $ticket = Ticket::factory()->create([
+        'user_id' => $customer->id,
+        'title' => 'Customer Ticket',
+        'description' => 'Customer Description',
+        'status' => 'open',
+    ]);
+
+    // Authenticate as customer
+    Sanctum::actingAs($customer);
+
+    // Try to change status to in_progress
+    $response = $this->putJson("/api/tickets/{$ticket->id}", [
+        'status' => 'in_progress',
+    ]);
+
+    // Should be forbidden
+    $response->assertStatus(403);
+    $response->assertJson([
+        'message' => 'Customers can only close tickets',
+    ]);
+
+    // Verify ticket status was NOT changed
+    $ticket->refresh();
+    expect($ticket->status)->toBe('open');
+
+    // Try to change status to resolved
+    $response = $this->putJson("/api/tickets/{$ticket->id}", [
+        'status' => 'resolved',
+    ]);
+
+    $response->assertStatus(403);
+    $ticket->refresh();
+    expect($ticket->status)->toBe('open');
+
+    // Try to change status to closed (should succeed)
+    $response = $this->putJson("/api/tickets/{$ticket->id}", [
+        'status' => 'closed',
+    ]);
+
+    $response->assertStatus(200);
+    $ticket->refresh();
+    expect($ticket->status)->toBe('closed');
+});
+
