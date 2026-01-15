@@ -121,3 +121,25 @@ test('validation fails with invalid data', function () {
     $response->assertStatus(422);
     $response->assertJsonValidationErrors('title');
 });
+
+test('created ticket is assigned to the authenticated user even if user_id is supplied', function () {
+    $customer = User::factory()->create(['role' => 'customer']);
+    $otherUser = User::factory()->create();
+
+    $payload = [
+        'title' => 'Attempted Owner Override',
+        'description' => 'Trying to set owner to another user',
+        'status' => 'open',
+        'user_id' => $otherUser->id,
+    ];
+
+    $response = $this->actingAs($customer)->postJson('/api/tickets', $payload);
+
+    $response->assertStatus(201);
+    $response->assertJsonFragment(['title' => 'Attempted Owner Override']);
+
+    $this->assertDatabaseHas('tickets', [
+        'title' => 'Attempted Owner Override',
+        'user_id' => $customer->id,
+    ]);
+});
