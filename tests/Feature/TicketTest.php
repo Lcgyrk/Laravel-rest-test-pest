@@ -34,3 +34,17 @@ test('customer can only see their own tickets', function () {
     $response->assertJsonFragment(['title' => 'Customer Ticket']);
     $response->assertJsonMissing(['title' => 'Other Customer Ticket']);
 });
+
+test('agent can see all tickets', function () {
+    $agent = User::factory()->create(['role' => 'agent']);
+    $u = User::factory()->create();
+
+    Ticket::factory()->create(['user_id' => $u->id, 'title' => 'User Ticket']);
+    Ticket::factory()->create(['user_id' => $agent->id, 'title' => 'Agent Ticket']);
+
+    $response = $this->actingAs($agent)->getJson('/api/tickets');
+
+    $response->assertStatus(200);
+    $response->assertJsonFragment(['title' => 'User Ticket']);
+    $response->assertJsonFragment(['title' => 'Agent Ticket']);
+});
