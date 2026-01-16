@@ -1,10 +1,29 @@
-php artisan install:api
-php artisan migrate:refresh
-php artisan make:controller AuthController
+# Laravel REST Test (Pest)
 
-php artisan make:model Post --api -m
+Készítette:
+- Kapocsi Hunor
+- Pap László
+- Reinhardt Benjámin
 
+## Telepítés és futtatás
 
-php artisan make:policy PostPolicy --model=Post
+1. Másold a környezeti fájlt:
+```bash
+mv .env.example .env
+# Windows (PowerShell)
+Rename-Item .env.example .env
+```
 
-php artisan make:policy UserPolicy
+2. Telepítsd a Node.js csomagokat:
+```bash
+npm install
+```
+
+3. Telepítsd a PHP függőségeket:
+```bash
+composer install
+```
+
+4. Futtasd a teszteket:
+```bash
+php
